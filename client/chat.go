@@ -27,12 +27,12 @@ func connectToEchoServer(serverURL string, username string) error {
 		return fmt.Errorf("Failed to write to server: %v", err)
 
 	}
-	fmt.Printf("[%s] ✓ Username sent: %s\n", time.Now().Format("15:04:05"), username)
+	fmt.Printf("[%s] ✓ Username sent: %s\n", getTimestamp(), username)
 	fmt.Println("-------------------------------------------")
 	fmt.Println("Listening for messages from server...")
 
 	for {
-		messageType, message, err := c.ReadMessage()
+		messageType, data, err := c.ReadMessage()
 		if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 			log.Printf("error: %v", err)
 			return err
@@ -42,9 +42,9 @@ func connectToEchoServer(serverURL string, username string) error {
 			break
 		}
 		if messageType == websocket.TextMessage {
-			fmt.Printf("[%s] ✓ Message received: %s\n", getTimestamp(), message)
-			fmt.Println("-------------------------------------------")
-
+			timestamp := getTimestamp()
+			message := string(data)
+			fmt.Printf("[%s] Server -> Client: %s\n", timestamp, message)
 		}
 
 	}
@@ -63,5 +63,5 @@ func getUsername() string {
 }
 
 func getTimestamp() string {
-	return time.Now().Format("27-12-2025 15:04:05")
+	return time.Now().Format("02/01/2006 03:04:05 PM")
 }
