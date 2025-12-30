@@ -53,4 +53,3 @@ getTimestamp() // returns the current timestamp as a string in the format of "02
 - Created Chat View with vertical sidebar for channels and message viewport
 - Added navigation logic for cycling through channels and inputs
 - ensured correct alignment of UI elements and clean message formatting
-- Visual Proof: [tui-demo-IIT2023139.mp4](assets/tui-demo-IIT2023139.mp4)
