@@ -45,3 +45,12 @@ getTimestamp() // returns the current timestamp as a string in the format of "02
 - Added "Enter Message : " prompt in client/chat.go message input loop
 - Fixed server/server.js: moved message handler inside username callback to prevent username broadcast as chat message
 - Fixed client/chat.go: implemented ANSI escape codes to reprint prompt after incoming messages for cleaner display
+
+### {IIT2023139} {#79 Feat: Implement Initial TUI Design, Chat Interactivity, and Channel Navigation.}
+
+- Designed a complete TUI interface using Bubble Tea and Lipgloss
+- Implemented Login View with input fields for Server, Username, and Password
+- Created Chat View with vertical sidebar for channels and message viewport
+- Added navigation logic for cycling through channels and inputs
+- ensured correct alignment of UI elements and clean message formatting
+- Visual Proof: [tui-demo-IIT2023139.mp4](assets/tui-demo-IIT2023139.mp4)
