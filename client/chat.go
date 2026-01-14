@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 	"time"
-
+	"encoding/json"
 	"github.com/gorilla/websocket"
 )
 
@@ -24,14 +24,26 @@ func connectToEchoServer(serverURL string, username string, password string) err
 	defer c.Close()
 
 	fmt.Printf("[%s] ✓ Connected to server\n", getTimestamp())
-	err = c.WriteMessage(websocket.TextMessage, []byte(username))
-	if err != nil {
-		return fmt.Errorf("Failed to write to server: %v", err)
 
+	authPayload := map[string]string{
+		"username": username,
+		"password": password,
 	}
-	fmt.Printf("[%s] ✓ Username sent: %s\n", getTimestamp(), username)
+
+	authBytes, err := json.Marshal(authPayload)
+	if err != nil {
+		return fmt.Errorf("Failed to encode auth payload: %v", err)
+	}
+
+	err = c.WriteMessage(websocket.TextMessage, authBytes)
+	if err != nil {
+		return fmt.Errorf("Failed to send auth data: %v", err)
+	}
+
+	fmt.Printf("[%s] ✓ Auth data sent for user: %s\n", getTimestamp(), username)
 	fmt.Println("-------------------------------------------")
 	fmt.Println("Listening for messages from server...")
+
 
 	// Run a goroutine so incoming messages are received in background while user types
 	go func() {

@@ -3,6 +3,7 @@ const WebSocket = require("ws");
 const mongoose = require("mongoose");
 const User = require("./models/User");
 const Message = require("./models/Message");
+const bcrypt = require("bcrypt");
 
 const PORT = process.env.PORT || 8080;
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -63,57 +64,107 @@ async function startServer() {
   const wss = new WebSocket.Server({ port: PORT });
 
   wss.on("connection", (ws) => {
-    ws.once("message", async (message) => {
-      const username = message.toString().trim();
 
-      const taken = await isUsernameTaken(username);
-      if (taken) {
-        ws.send(`ERROR: Username "${username}" is already taken. Please reconnect with a different username.`);
+    ws.once("message", async (message) => {
+      let data;
+
+      try {
+        data = JSON.parse(message.toString());
+      } catch {
+        ws.send("ERROR: Invalid auth format");
         ws.close();
-        console.log(`[${getTimestamp()}] Rejected connection: username "${username}" is taken`);
         return;
       }
 
-      await logUserConnection(username);
+      const { username, password } = data;
 
-      clients.set(ws, username);
-      console.log(`[${getTimestamp()}] ${username} joined`);
+      if (!username || !password) {
+        ws.send("ERROR: Username and password required");
+        ws.close();
+        return;
+      }
 
-      wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(`${username} has joined`);
+      try {
+        const existingUser = await User.findOne({ username });
+
+        // 🆕 NEW USER
+        if (!existingUser) {
+          const passwordHash = await bcrypt.hash(password, 10);
+
+          await User.create({
+            username,
+            passwordHash,
+            connectedAt: new Date(),
+            isOnline: true
+          });
+
+          console.log(`[${getTimestamp()}] New user registered: ${username}`);
         }
-      });
+        // 🔐 EXISTING USER
+        else {
+          const isMatch = await bcrypt.compare(password, existingUser.passwordHash);
 
-      ws.on("message", async (message) => {
-        const text = message.toString().trim();
-        const username = clients.get(ws);
-        const time = getTimestamp();
+          if (!isMatch) {
+            ws.send("ERROR: Wrong password");
+            ws.close();
+            console.log(`[${getTimestamp()}] Wrong password attempt for ${username}`);
+            return;
+          }
 
-        await logMessage(username, text);
+          await User.findOneAndUpdate(
+            { username },
+            { isOnline: true, connectedAt: new Date() }
+          );
 
-        const finalMessage = `${time}: ${username} said: ${text}`;
+          console.log(`[${getTimestamp()}] ${username} authenticated`);
+        }
+
+        // ✅ AUTH SUCCESS
+        ws.send("AUTH_SUCCESS");
+        clients.set(ws, username);
+
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
-            client.send(finalMessage);
+            client.send(`${username} has joined`);
           }
         });
+
+            ws.on("message", async (message) => {
+      const text = message.toString().trim();
+      const time = getTimestamp();
+
+      if (!text) return; // skip empty messages
+
+      await logMessage(username, text);
+
+      const finalMessage = `${time}: ${username} said: ${text}`;
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(finalMessage);
+        }
       });
+    });
+
+
+      } catch (err) {
+        console.error("Authentication error:", err.message);
+        ws.send("ERROR: Authentication failed");
+        ws.close();
+      }
     });
 
     ws.on("close", async () => {
       const username = clients.get(ws);
       if (username) {
         console.log(`[${getTimestamp()}] ${username} disconnected`);
-        
         await markUserOffline(username);
+        clients.delete(ws);
 
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(`${username} has left`);
           }
         });
-        clients.delete(ws);
       }
     });
   });
