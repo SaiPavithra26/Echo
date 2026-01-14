@@ -88,3 +88,24 @@ getTimestamp() // returns the current timestamp as a string in the format of "02
   - Added call to getPassword() after username prompt.
   - Passed password to connectToEchoServer().
 - Tested locally: Verified password prompt appears and chat messages display cleanly.
+
+### {SaiPavithra} {#110 Authentication with Bcrypt}
+
+- Updated server/server.js:
+
+  - Implemented user authentication with bcrypt for password hashing.
+  - New users are registered with hashed passwords stored in the database (User model).
+  - Existing users can log in; passwords are verified against the bcrypt hash.
+  - Wrong password attempts send "ERROR: Wrong password" to the client and disconnect them.
+  - Users are marked online when connected and offline when disconnected.
+  - All user connections are logged in the database with connectedAt timestamp.
+
+- Updated server/models/User.js:
+  - Added passwordHash field to store bcrypt-hashed passwords.
+
+- server/models/Message.js:
+  - Ensured chat messages are only stored if content is not empty to prevent validation errors.
+
+
+
+
